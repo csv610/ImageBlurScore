@@ -1,0 +1,50 @@
+# Compiled object files
+*.o
+*.obj
+*.out
+
+# Compiled libraries
+*.a
+*.lib
+*.dll
+*.dylib
+*.so
+*.so.*
+
+# Executables
+*.exe
+*.app
+blur_test
+
+# Build directories
+build/
+cmake-build-debug/
+cmake-build-release/
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.cbp
+*.depend
+*.layout
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Test/Debug files
+*.dSYM/
+*.su
+*.gch
+*.pch
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
