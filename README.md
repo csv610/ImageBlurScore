@@ -1,47 +1,38 @@
 # ImageBlurScore
 
-A C++ header-only library for computing image blur scores using OpenCV. This library provides multiple algorithms to assess the amount of blur in an image.
+A C++ header-only library for computing image blur and sharpness scores using OpenCV. Supports multiple algorithms and grid-based scoring.
 
-## Features
+## Requirements
 
-- **Laplacian-based blur detection**: Uses variance of Laplacian operator to detect blur
-- **Fourier-based analysis**: Analyzes blur using frequency domain (DFT)
-- **Gradient magnitude scoring**: Measures image sharpness through gradient analysis
-- **Contrast scoring**: Evaluates image contrast levels
-- **Wavelet analysis**: Uses multi-level wavelet decomposition to detect blur
-- **Dark channel method**: Implements dark channel-based analysis
-- **Phase correlation**: Analyzes blur using phase correlation techniques
-
-## Installation
-
-### Requirements
-
-- C++11 or higher
+- C++17 or later
 - OpenCV 4.0+
 
-### Usage
+## Integration
 
-Simply include the header file in your project:
+Copy `ImageBlurScore.h` into your project and include it:
 
 ```cpp
 #include "ImageBlurScore.h"
 
-// Create an instance
 ImageBlurScore blurscorer;
-
-// Load an image with OpenCV
 cv::Mat image = cv::imread("image.jpg");
 
-// Compute blur score
+// Single score (default: Laplacian method)
 double score = blurscorer(image);
-std::cout << "Blur Score: " << score << std::endl;
+
+// Specific algorithm
+double score = blurscorer(image, BlurMethod::WAVELET);
+
+// Grid of scores (e.g. 4x4 blocks)
+cv::Mat grid = blurscorer(image, 4, 4);
+cv::Mat grid = blurscorer.computeGrid(image, 4, 4, BlurMethod::FOURIER);
 ```
 
-Higher scores generally indicate sharper (less blurred) images.
+Higher scores indicate sharper (less blurred) images.
 
-## Building the Test Program
+## Build Test Program
 
-### Using CMake (Recommended):
+### CMake
 
 ```bash
 mkdir build && cd build
@@ -50,30 +41,36 @@ make
 ./blur_test path/to/image.jpg
 ```
 
-### Using g++ directly:
+### g++ (direct)
 
 ```bash
-g++ -std=c++11 main.cpp -o blur_test `pkg-config --cflags --libs opencv4`
+g++ -std=c++17 main.cpp -o blur_test `pkg-config --cflags --libs opencv4`
 ./blur_test path/to/image.jpg
 ```
 
-## Methods
+## Algorithms
 
-The library provides several blur detection algorithms:
+| Method | Enum | Description |
+|--------|------|-------------|
+| Laplacian | `BlurMethod::LAPLACIAN` | Variance of Laplacian operator |
+| Fourier | `BlurMethod::FOURIER` | Log-magnitude variance in frequency domain |
+| Gradient | `BlurMethod::GRADIENT_MAGNITUDE` | Sobel gradient magnitude standard deviation |
+| Contrast | `BlurMethod::CONTRAST` | Grayscale intensity standard deviation |
+| Phase Correlation | `BlurMethod::PHASE_CORRELATION` | Peak height of phase correlation response |
+| Wavelet | `BlurMethod::WAVELET` | Multi-level Laplacian pyramid detail coefficients |
 
-- `operator()()` - Uses the default Laplacian-based method
-- `computeBlurScore()` - Laplacian variance method
-- `computeFourierBlurScore()` - Frequency domain analysis
-- `computeGradientMagnitudeScore()` - Gradient-based sharpness
-- `computeContrastScore()` - Contrast measurement
-- `computeWaveletBlurScore()` - Multi-level wavelet analysis
-- `computePhaseCorrelationScore()` - Phase correlation method
-- `computeDarkChannel()` - Dark channel computation
+## API
+
+```cpp
+// Single score
+double operator()(const cv::Mat& image, BlurMethod = LAPLACIAN) const;
+double compute(const cv::Mat& image, BlurMethod = LAPLACIAN) const;
+
+// Grid of scores (returns CV_64F matrix, size gridRows x gridCols)
+cv::Mat operator()(const cv::Mat& image, int gridRows, int gridCols, BlurMethod = LAPLACIAN) const;
+cv::Mat computeGrid(const cv::Mat& image, int gridRows, int gridCols, BlurMethod = LAPLACIAN) const;
+```
 
 ## License
 
-[Add your chosen license here]
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+MIT. See [LICENSE](LICENSE).

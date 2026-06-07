@@ -43,6 +43,18 @@ public:
     }
 
     /**
+     * @brief Computes blur score for each block in a grid
+     * @param image Input image (BGR or grayscale)
+     * @param gridRows Number of rows in the grid
+     * @param gridCols Number of columns in the grid
+     * @param method Blur detection algorithm to use (default: LAPLACIAN)
+     * @return CV_64F matrix of size gridRows x gridCols with per-block scores
+     */
+    cv::Mat operator()(const cv::Mat& image, int gridRows, int gridCols, BlurMethod method = BlurMethod::LAPLACIAN) const {
+        return computeGrid(image, gridRows, gridCols, method);
+    }
+
+    /**
      * @brief Computes blur score using the specified method
      * @param image Input image (BGR or grayscale)
      * @param method Blur detection algorithm to use
@@ -67,17 +79,46 @@ public:
         }
     }
 
+    /**
+     * @brief Computes blur score for each block in a grid
+     * @param image Input image (BGR or grayscale)
+     * @param gridRows Number of rows in the grid
+     * @param gridCols Number of columns in the grid
+     * @param method Blur detection algorithm to use (default: LAPLACIAN)
+     * @return CV_64F matrix of size gridRows x gridCols with per-block scores
+     */
+    cv::Mat computeGrid(const cv::Mat& image, int gridRows, int gridCols, BlurMethod method = BlurMethod::LAPLACIAN) const {
+        cv::Mat scores(gridRows, gridCols, CV_64F);
+
+        int blockH = image.rows / gridRows;
+        int blockW = image.cols / gridCols;
+
+        for (int r = 0; r < gridRows; r++) {
+            for (int c = 0; c < gridCols; c++) {
+                int y1 = r * blockH;
+                int x1 = c * blockW;
+                int y2 = (r == gridRows - 1) ? image.rows : y1 + blockH;
+                int x2 = (c == gridCols - 1) ? image.cols : x1 + blockW;
+
+                cv::Rect roi(x1, y1, x2 - x1, y2 - y1);
+                scores.at<double>(r, c) = compute(image(roi), method);
+            }
+        }
+
+        return scores;
+    }
+
 private:
     double computeLaplacianScore(const cv::Mat& image) const {
         cv::Mat gray, laplacian;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
         cv::Laplacian(gray, laplacian, CV_64F);
-        cv::Scalar mu, sigma;
-        cv::meanStdDev(laplacian, mu, sigma);
+        cv::Scalar sigma;
+        cv::meanStdDev(laplacian, cv::noArray(), sigma);
         return sigma.val[0] * sigma.val[0];
     }
 
-    double computeFourierBlurScore(const cv::Mat& image) {
+    double computeFourierBlurScore(const cv::Mat& image) const {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
@@ -87,19 +128,20 @@ private:
         cv::merge(planes, 2, complexI);
         cv::dft(complexI, complexI);
 
-        // Compute magnitude of DFT
+        // Compute log magnitude of DFT
         cv::split(complexI, planes);
         cv::magnitude(planes[0], planes[1], planes[0]);
         cv::Mat magI = planes[0];
+        magI += cv::Scalar::all(1);
+        cv::log(magI, magI);
 
-        // Focus measure may be variance of magnitude in frequency domain
         cv::Scalar mean, stddev;
         cv::meanStdDev(magI, mean, stddev);
 
         return stddev[0] * stddev[0];
     }
 
-    double computeGradientMagnitudeScore(const cv::Mat& image) {
+    double computeGradientMagnitudeScore(const cv::Mat& image) const {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
@@ -116,7 +158,7 @@ private:
         return stddev[0];
     }
 
-    double computeContrastScore(const cv::Mat& image) {
+    double computeContrastScore(const cv::Mat& image) const {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
@@ -126,7 +168,7 @@ private:
         return stddev[0];
     }
 
-    double computePhaseCorrelationScore(const cv::Mat& image) {
+    double computePhaseCorrelationScore(const cv::Mat& image) const {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
@@ -134,63 +176,38 @@ private:
         cv::Mat shifted = cv::Mat::zeros(gray.size(), gray.type());
         gray(cv::Rect(1, 1, gray.cols - 1, gray.rows - 1)).copyTo(shifted(cv::Rect(0, 0, gray.cols - 1, gray.rows - 1)));
 
-        cv::Mat result;
-        cv::phaseCorrelateRes(gray, shifted, result);
+        double response = 0.0;
+        cv::phaseCorrelate(gray, shifted, cv::noArray(), &response);
 
-        double peak_height = result.at<double>(0, 3);
-
-        return peak_height;
+        return response;
     }
-    double computeWaveletBlurScore(const cv::Mat& image) {
+    double computeWaveletBlurScore(const cv::Mat& image) const {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+        gray.convertTo(gray, CV_32F);
 
-        // Iteratively down-sample the image and subtract the smoothed version to
-        // approximate the wavelet detail coefficients
-        cv::Mat down = gray.clone();
-        cv::Mat up;
+        // Multi-level wavelet-like decomposition using a Laplacian pyramid
+        cv::Mat current = gray.clone();
+        cv::Mat wavelet_detail = cv::Mat::zeros(gray.size(), CV_32F);
         int num_levels = 4;
-        cv::Mat wavelet_approx = cv::Mat::zeros(gray.size(), CV_32F);
 
         for(int i = 0; i < num_levels; i++) {
-            cv::pyrDown(down, down);
-            cv::pyrUp(down, up, wavelet_approx.size());
-            wavelet_approx += gray - up;
+            cv::Mat down, up;
+            cv::pyrDown(current, down);
+            cv::pyrUp(down, up, current.size());
+
+            cv::Mat detail = current - up;
+            cv::resize(detail, detail, gray.size());
+            wavelet_detail += detail;
+
+            current = down;
         }
 
         // Measure the amount of high-frequency content by measuring
         // the standard deviation of the wavelet coefficients
         cv::Scalar mean, stddev;
-        cv::meanStdDev(wavelet_approx, mean, stddev);
+        cv::meanStdDev(wavelet_detail, mean, stddev);
 
-        return stddev[0];
-    }
-
-    cv::Mat computeDarkChannel(const cv::Mat& src, int patchSize = 15) {
-        cv::Mat darkChannel = cv::Mat::zeros(src.size(), CV_8UC1);
-        int halfPatch = patchSize / 2;
-        for (int i = 0; i < src.rows; i++) {
-            for (int j = 0; j < src.cols; j++) {
-                int darkValue = 255;
-                for (int k = -halfPatch; k <= halfPatch; k++) {
-                    for (int l = -halfPatch; l <= halfPatch; l++) {
-                        int newI = std::clamp(i + k, 0, src.rows - 1);
-                        int newJ = std::clamp(j + l, 0, src.cols - 1);
-                        const cv::Vec3b& pixel = src.at<cv::Vec3b>(newI, newJ);
-                        for (int c = 0; c < src.channels(); c++) {
-                            darkValue = std::min(darkValue, (int)pixel[c]);
-                        }
-                    }
-                }
-                darkChannel.at<uchar>(i, j) = darkValue;
-            }
-        }
-        return darkChannel;
-    }
-
-    double computeBlurScore(const cv::Mat& darkChannel) {
-        cv::Scalar stddev;
-        cv::meanStdDev(darkChannel, cv::noArray(), stddev);
         return stddev[0];
     }
 
