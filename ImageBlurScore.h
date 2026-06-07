@@ -50,7 +50,7 @@ public:
      * @param method Blur detection algorithm to use (default: LAPLACIAN)
      * @return Blur score (higher = sharper, less blurred)
      */
-    double operator()(const cv::Mat& image, BlurMethod method = BlurMethod::LAPLACIAN) const
+    [[nodiscard]] double operator()(const cv::Mat& image, BlurMethod method = BlurMethod::LAPLACIAN) const
     {
         return compute(image, method);
     }
@@ -63,8 +63,8 @@ public:
      * @param method Blur detection algorithm to use (default: LAPLACIAN)
      * @return CV_64F matrix of size gridRows x gridCols with per-block scores
      */
-    cv::Mat operator()(const cv::Mat& image, int gridRows, int gridCols,
-                       BlurMethod method = BlurMethod::LAPLACIAN) const
+    [[nodiscard]] cv::Mat operator()(const cv::Mat& image, int gridRows, int gridCols,
+                                     BlurMethod method = BlurMethod::LAPLACIAN) const
     {
         return computeGrid(image, gridRows, gridCols, method);
     }
@@ -75,7 +75,7 @@ public:
      * @param method Blur detection algorithm to use
      * @return Blur score (higher = sharper, less blurred)
      */
-    double compute(const cv::Mat& image, BlurMethod method = BlurMethod::LAPLACIAN) const
+    [[nodiscard]] double compute(const cv::Mat& image, BlurMethod method = BlurMethod::LAPLACIAN) const
     {
         switch (method) {
             case BlurMethod::LAPLACIAN:
@@ -117,17 +117,20 @@ public:
      * @param method Blur detection algorithm to use (default: LAPLACIAN)
      * @return CV_64F matrix of size gridRows x gridCols with per-block scores
      */
-    cv::Mat computeGrid(const cv::Mat& image, int gridRows, int gridCols,
-                        BlurMethod method = BlurMethod::LAPLACIAN) const
+    [[nodiscard]] cv::Mat computeGrid(const cv::Mat& image, int gridRows, int gridCols,
+                                      BlurMethod method = BlurMethod::LAPLACIAN) const
     {
         if (gridRows <= 0 || gridCols <= 0) {
             throw std::invalid_argument("gridRows and gridCols must be positive");
         }
 
-        cv::Mat scores(gridRows, gridCols, CV_64F);
-
         int blockH = image.rows / gridRows;
         int blockW = image.cols / gridCols;
+        if (blockH == 0 || blockW == 0) {
+            throw std::invalid_argument("grid dimensions exceed image dimensions");
+        }
+
+        cv::Mat scores(gridRows, gridCols, CV_64F);
 
         for (int r = 0; r < gridRows; r++) {
             for (int c = 0; c < gridCols; c++) {
@@ -145,6 +148,10 @@ public:
     }
 
 private:
+    // Smallest Sobel aperture that gives meaningful gradient estimates.
+    // Minimum size (3) is computationally cheap and standard for focus measures.
+    static constexpr int kSobelKernel = 3;
+
     double computeLaplacianScore(const cv::Mat& image) const
     {
         cv::Mat gray, laplacian;
@@ -160,7 +167,6 @@ private:
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
-        // Compute DFT (Discrete Fourier Transform)
         cv::Mat planes[] = {cv::Mat_<float>(gray), cv::Mat::zeros(gray.size(), CV_32F)};
         cv::Mat complexI;
         cv::merge(planes, 2, complexI);
@@ -185,8 +191,8 @@ private:
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
         cv::Mat grad_x, grad_y;
-        cv::Sobel(gray, grad_x, CV_32F, 1, 0, 3);
-        cv::Sobel(gray, grad_y, CV_32F, 0, 1, 3);
+        cv::Sobel(gray, grad_x, CV_32F, 1, 0, kSobelKernel);
+        cv::Sobel(gray, grad_y, CV_32F, 0, 1, kSobelKernel);
 
         cv::Mat magnitude;
         cv::magnitude(grad_x, grad_y, magnitude);
@@ -219,7 +225,8 @@ private:
             .copyTo(shifted(cv::Rect(0, 0, gray.cols - 1, gray.rows - 1)));
 
         double response = 0.0;
-        cv::phaseCorrelate(gray, shifted, cv::noArray(), &response);
+        cv::Point2d shift = cv::phaseCorrelate(gray, shifted, cv::noArray(), &response);
+        (void)shift;
 
         return response;
     }
@@ -232,7 +239,7 @@ private:
         // Multi-level wavelet-like decomposition using a Laplacian pyramid
         cv::Mat current = gray.clone();
         cv::Mat wavelet_detail = cv::Mat::zeros(gray.size(), CV_32F);
-        int num_levels = 4;
+        constexpr int num_levels = 4;
 
         for (int i = 0; i < num_levels; i++) {
             cv::Mat down, up;
@@ -277,8 +284,8 @@ private:
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
         cv::Mat gx, gy;
-        cv::Sobel(gray, gx, CV_32F, 1, 0, 3);
-        cv::Sobel(gray, gy, CV_32F, 0, 1, 3);
+        cv::Sobel(gray, gx, CV_32F, 1, 0, kSobelKernel);
+        cv::Sobel(gray, gy, CV_32F, 0, 1, kSobelKernel);
 
         cv::Mat squared;
         cv::pow(gx, 2, gx);
@@ -297,8 +304,8 @@ private:
         gray.convertTo(gray, CV_64F);
 
         cv::Mat ddx, ddy;
-        cv::Sobel(gray, ddx, CV_64F, 2, 0, 3);
-        cv::Sobel(gray, ddy, CV_64F, 0, 2, 3);
+        cv::Sobel(gray, ddx, CV_64F, 2, 0, kSobelKernel);
+        cv::Sobel(gray, ddy, CV_64F, 0, 2, kSobelKernel);
 
         ddx = cv::abs(ddx);
         ddy = cv::abs(ddy);
@@ -371,7 +378,7 @@ private:
         gray.convertTo(gray, CV_32F);
 
         double totalHigh = 0, totalLow = 0;
-        int const blockSize = 8;
+        constexpr int blockSize = 8;
 
         for (int r = 0; r <= gray.rows - blockSize; r += blockSize) {
             for (int c = 0; c <= gray.cols - blockSize; c += blockSize) {

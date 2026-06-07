@@ -9,8 +9,10 @@ static cv::Mat createTestImage(int rows, int cols)
     cv::Mat img(rows, cols, CV_8UC3);
     for (int r = 0; r < rows; r++) {
         for (int c = 0; c < cols; c++) {
-            img.at<cv::Vec3b>(r, c) =
-                cv::Vec3b((uchar) (r * 255 / rows), (uchar) (c * 255 / cols), (uchar) ((r + c) * 255 / (rows + cols)));
+            img.at<cv::Vec3b>(r, c) = cv::Vec3b(
+                cv::saturate_cast<uchar>(r * 255 / rows),
+                cv::saturate_cast<uchar>(c * 255 / cols),
+                cv::saturate_cast<uchar>((r + c) * 255 / (rows + cols)));
         }
     }
     return img;
@@ -282,7 +284,7 @@ int main()
         cv::Mat img = createTestImage(100, 100);
         bool caught = false;
         try {
-            scorer.computeGrid(img, 0, 4);
+            (void)scorer.computeGrid(img, 0, 4);
         }
         catch (const std::invalid_argument&) {
             caught = true;
@@ -290,7 +292,21 @@ int main()
         assert(caught);
         caught = false;
         try {
-            scorer.computeGrid(img, 4, -1);
+            (void)scorer.computeGrid(img, 4, -1);
+        }
+        catch (const std::invalid_argument&) {
+            caught = true;
+        }
+        assert(caught);
+        PASS();
+    }
+
+    {
+        TEST("computeGrid throws when grid exceeds image dimensions");
+        cv::Mat img = createTestImage(10, 10);
+        bool caught = false;
+        try {
+            (void)scorer.computeGrid(img, 20, 20);
         }
         catch (const std::invalid_argument&) {
             caught = true;
