@@ -8,18 +8,37 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    // Read the input image
     cv::Mat image = cv::imread(argv[1], cv::IMREAD_COLOR);
     if (image.empty()) {
         std::cout << "Could not open or find the image!" << std::endl;
         return -1;
     }
 
-    ImageBlurScore blurscorer;
+    blur::ImageBlurScore blurscorer;
 
-    // Calculate and display the blur score
-    double blurScore = blurscorer(image);
-    std::cout << "Blur Score: " << blurScore << std::endl;
+    double score = blurscorer(image);
+    std::cout << "Blur Score (Laplacian): " << score << std::endl;
+
+    score = blurscorer(image, blur::BlurMethod::FOURIER);
+    std::cout << "Blur Score (Fourier):   " << score << std::endl;
+
+    score = blurscorer(image, blur::BlurMethod::GRADIENT_MAGNITUDE);
+    std::cout << "Blur Score (Gradient):  " << score << std::endl;
+
+    score = blurscorer(image, blur::BlurMethod::CONTRAST);
+    std::cout << "Blur Score (Contrast):  " << score << std::endl;
+
+    score = blurscorer(image, blur::BlurMethod::WAVELET);
+    std::cout << "Blur Score (Wavelet):   " << score << std::endl;
+
+    cv::Mat grid = blurscorer(image, 4, 4);
+    std::cout << "Grid (4x4, Laplacian):" << std::endl;
+    for (int r = 0; r < grid.rows; r++) {
+        for (int c = 0; c < grid.cols; c++) {
+            std::cout << grid.at<double>(r, c) << "\t";
+        }
+        std::cout << std::endl;
+    }
 
     return 0;
 }

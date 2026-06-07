@@ -14,18 +14,18 @@ Copy `ImageBlurScore.h` into your project and include it:
 ```cpp
 #include "ImageBlurScore.h"
 
-ImageBlurScore blurscorer;
+blur::ImageBlurScore blurscorer;
 cv::Mat image = cv::imread("image.jpg");
 
 // Single score (default: Laplacian method)
 double score = blurscorer(image);
 
 // Specific algorithm
-double score = blurscorer(image, BlurMethod::WAVELET);
+double score = blurscorer(image, blur::BlurMethod::WAVELET);
 
 // Grid of scores (e.g. 4x4 blocks)
 cv::Mat grid = blurscorer(image, 4, 4);
-cv::Mat grid = blurscorer.computeGrid(image, 4, 4, BlurMethod::FOURIER);
+cv::Mat grid = blurscorer.computeGrid(image, 4, 4, blur::BlurMethod::FOURIER);
 ```
 
 Higher scores indicate sharper (less blurred) images.

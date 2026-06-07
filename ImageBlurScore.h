@@ -7,8 +7,10 @@
  */
 
 #pragma once
-#include <iostream>
+#include <stdexcept>
 #include <opencv2/opencv.hpp>
+
+namespace blur {
 
 /**
  * @enum BlurMethod
@@ -88,6 +90,10 @@ public:
      * @return CV_64F matrix of size gridRows x gridCols with per-block scores
      */
     cv::Mat computeGrid(const cv::Mat& image, int gridRows, int gridCols, BlurMethod method = BlurMethod::LAPLACIAN) const {
+        if (gridRows <= 0 || gridCols <= 0) {
+            throw std::invalid_argument("gridRows and gridCols must be positive");
+        }
+
         cv::Mat scores(gridRows, gridCols, CV_64F);
 
         int blockH = image.rows / gridRows;
@@ -171,8 +177,8 @@ private:
     double computePhaseCorrelationScore(const cv::Mat& image) const {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+        gray.convertTo(gray, CV_64F);
 
-        // Create a shifted version of the image
         cv::Mat shifted = cv::Mat::zeros(gray.size(), gray.type());
         gray(cv::Rect(1, 1, gray.cols - 1, gray.rows - 1)).copyTo(shifted(cv::Rect(0, 0, gray.cols - 1, gray.rows - 1)));
 
@@ -212,3 +218,5 @@ private:
     }
 
 };
+
+} // namespace blur
