@@ -31,6 +31,12 @@ int main(int argc, char** argv) {
     score = blurscorer(image, blur::BlurMethod::WAVELET);
     std::cout << "Blur Score (Wavelet):   " << score << std::endl;
 
+    score = blurscorer(image, blur::BlurMethod::BRENNER);
+    std::cout << "Blur Score (Brenner):   " << score << std::endl;
+
+    score = blurscorer(image, blur::BlurMethod::TENENGRAD);
+    std::cout << "Blur Score (Tenengrad): " << score << std::endl;
+
     cv::Mat grid = blurscorer(image, 4, 4);
     std::cout << "Grid (4x4, Laplacian):" << std::endl;
     for (int r = 0; r < grid.rows; r++) {

@@ -22,7 +22,9 @@ enum class BlurMethod {
     GRADIENT_MAGNITUDE,     ///< Sobel gradient magnitude method
     CONTRAST,               ///< Contrast/standard deviation method
     PHASE_CORRELATION,      ///< Phase correlation method
-    WAVELET                 ///< Wavelet decomposition method
+    WAVELET,                ///< Wavelet decomposition method
+    BRENNER,                ///< Brenner focus measure (horizontal diff step 2)
+    TENENGRAD               ///< Tenenbaum gradient (sum of squared Sobel responses)
 };
 
 /**
@@ -76,6 +78,10 @@ public:
                 return computePhaseCorrelationScore(image);
             case BlurMethod::WAVELET:
                 return computeWaveletBlurScore(image);
+            case BlurMethod::BRENNER:
+                return computeBrennerScore(image);
+            case BlurMethod::TENENGRAD:
+                return computeTenengradScore(image);
             default:
                 return computeLaplacianScore(image);
         }
@@ -214,6 +220,40 @@ private:
         cv::Scalar mean, stddev;
         cv::meanStdDev(wavelet_detail, mean, stddev);
 
+        return stddev[0];
+    }
+
+    double computeBrennerScore(const cv::Mat& image) const {
+        cv::Mat gray;
+        cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+        gray.convertTo(gray, CV_64F);
+
+        cv::Mat diff;
+        cv::Mat right = gray(cv::Rect(2, 0, gray.cols - 2, gray.rows));
+        cv::Mat left  = gray(cv::Rect(0, 0, gray.cols - 2, gray.rows));
+        cv::subtract(right, left, diff);
+        cv::pow(diff, 2, diff);
+
+        cv::Scalar stddev;
+        cv::meanStdDev(diff, cv::noArray(), stddev);
+        return stddev[0];
+    }
+
+    double computeTenengradScore(const cv::Mat& image) const {
+        cv::Mat gray;
+        cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+
+        cv::Mat gx, gy;
+        cv::Sobel(gray, gx, CV_32F, 1, 0, 3);
+        cv::Sobel(gray, gy, CV_32F, 0, 1, 3);
+
+        cv::Mat squared;
+        cv::pow(gx, 2, gx);
+        cv::pow(gy, 2, gy);
+        cv::add(gx, gy, squared);
+
+        cv::Scalar stddev;
+        cv::meanStdDev(squared, cv::noArray(), stddev);
         return stddev[0];
     }
 

@@ -58,6 +58,8 @@ g++ -std=c++17 main.cpp -o blur_test `pkg-config --cflags --libs opencv4`
 | Contrast | `BlurMethod::CONTRAST` | Grayscale intensity standard deviation |
 | Phase Correlation | `BlurMethod::PHASE_CORRELATION` | Peak height of phase correlation response |
 | Wavelet | `BlurMethod::WAVELET` | Multi-level Laplacian pyramid detail coefficients |
+| Brenner | `BlurMethod::BRENNER` | Squared horizontal difference (step 2) standard deviation |
+| Tenengrad | `BlurMethod::TENENGRAD` | Sum of squared Sobel responses standard deviation |
 
 ## API
 

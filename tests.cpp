@@ -120,6 +120,40 @@ int main() {
         PASS();
     }
 
+    {
+        TEST("Brenner on gradient image");
+        cv::Mat img = createTestImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::BRENNER);
+        assert(std::isfinite(s));
+        assert(s >= 0);
+        PASS();
+    }
+
+    {
+        TEST("Brenner on uniform image (score should be ~0)");
+        cv::Mat img = createUniformImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::BRENNER);
+        assert(s < 1.0);
+        PASS();
+    }
+
+    {
+        TEST("Tenengrad on gradient image");
+        cv::Mat img = createTestImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::TENENGRAD);
+        assert(std::isfinite(s));
+        assert(s >= 0);
+        PASS();
+    }
+
+    {
+        TEST("Tenengrad on uniform image (score should be ~0)");
+        cv::Mat img = createUniformImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::TENENGRAD);
+        assert(s < 1.0);
+        PASS();
+    }
+
     // --- Grid tests ---
     std::cout << "[Grid tests]" << std::endl;
 
