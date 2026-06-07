@@ -1,35 +1,36 @@
-#include "ImageBlurScore.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>
 
-static cv::Mat createTestImage(int rows, int cols) {
+#include "ImageBlurScore.h"
+
+static cv::Mat createTestImage(int rows, int cols)
+{
     cv::Mat img(rows, cols, CV_8UC3);
     for (int r = 0; r < rows; r++) {
         for (int c = 0; c < cols; c++) {
-            img.at<cv::Vec3b>(r, c) = cv::Vec3b(
-                (uchar)(r * 255 / rows),
-                (uchar)(c * 255 / cols),
-                (uchar)((r + c) * 255 / (rows + cols))
-            );
+            img.at<cv::Vec3b>(r, c) =
+                cv::Vec3b((uchar) (r * 255 / rows), (uchar) (c * 255 / cols), (uchar) ((r + c) * 255 / (rows + cols)));
         }
     }
     return img;
 }
 
-static cv::Mat createUniformImage(int rows, int cols) {
+static cv::Mat createUniformImage(int rows, int cols)
+{
     return cv::Mat(rows, cols, CV_8UC3, cv::Scalar(128, 128, 128));
 }
 
-#define TEST(name) \
-    do { \
+#define TEST(name)                           \
+    do {                                     \
         std::cout << "  " << name << "... "; \
-        std::cout.flush(); \
+        std::cout.flush();                   \
     } while (0)
 
 #define PASS() std::cout << "PASS" << std::endl
 
-int main() {
+int main()
+{
     blur::ImageBlurScore scorer;
 
     // --- Single image tests ---
@@ -196,14 +197,16 @@ int main() {
         bool caught = false;
         try {
             scorer.computeGrid(img, 0, 4);
-        } catch (const std::invalid_argument&) {
+        }
+        catch (const std::invalid_argument&) {
             caught = true;
         }
         assert(caught);
         caught = false;
         try {
             scorer.computeGrid(img, 4, -1);
-        } catch (const std::invalid_argument&) {
+        }
+        catch (const std::invalid_argument&) {
             caught = true;
         }
         assert(caught);

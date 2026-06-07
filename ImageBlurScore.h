@@ -7,24 +7,26 @@
  */
 
 #pragma once
-#include <stdexcept>
 #include <opencv2/opencv.hpp>
+#include <stdexcept>
 
-namespace blur {
+namespace blur
+{
 
 /**
  * @enum BlurMethod
  * @brief Available blur detection algorithms
  */
-enum class BlurMethod {
-    LAPLACIAN,              ///< Laplacian variance method
-    FOURIER,                ///< Fourier transform-based method
-    GRADIENT_MAGNITUDE,     ///< Sobel gradient magnitude method
-    CONTRAST,               ///< Contrast/standard deviation method
-    PHASE_CORRELATION,      ///< Phase correlation method
-    WAVELET,                ///< Wavelet decomposition method
-    BRENNER,                ///< Brenner focus measure (horizontal diff step 2)
-    TENENGRAD               ///< Tenenbaum gradient (sum of squared Sobel responses)
+enum class BlurMethod
+{
+    LAPLACIAN,           ///< Laplacian variance method
+    FOURIER,             ///< Fourier transform-based method
+    GRADIENT_MAGNITUDE,  ///< Sobel gradient magnitude method
+    CONTRAST,            ///< Contrast/standard deviation method
+    PHASE_CORRELATION,   ///< Phase correlation method
+    WAVELET,             ///< Wavelet decomposition method
+    BRENNER,             ///< Brenner focus measure (horizontal diff step 2)
+    TENENGRAD            ///< Tenenbaum gradient (sum of squared Sobel responses)
 };
 
 /**
@@ -34,7 +36,8 @@ enum class BlurMethod {
  * This class provides multiple methods to assess image blur and sharpness,
  * including Laplacian, Fourier, gradient, and wavelet-based approaches.
  */
-class ImageBlurScore {
+class ImageBlurScore
+{
 public:
     /**
      * @brief Computes blur score using the specified method
@@ -42,7 +45,8 @@ public:
      * @param method Blur detection algorithm to use (default: LAPLACIAN)
      * @return Blur score (higher = sharper, less blurred)
      */
-    double operator()(const cv::Mat& image, BlurMethod method = BlurMethod::LAPLACIAN) const {
+    double operator()(const cv::Mat& image, BlurMethod method = BlurMethod::LAPLACIAN) const
+    {
         return compute(image, method);
     }
 
@@ -54,7 +58,9 @@ public:
      * @param method Blur detection algorithm to use (default: LAPLACIAN)
      * @return CV_64F matrix of size gridRows x gridCols with per-block scores
      */
-    cv::Mat operator()(const cv::Mat& image, int gridRows, int gridCols, BlurMethod method = BlurMethod::LAPLACIAN) const {
+    cv::Mat operator()(const cv::Mat& image, int gridRows, int gridCols,
+                       BlurMethod method = BlurMethod::LAPLACIAN) const
+    {
         return computeGrid(image, gridRows, gridCols, method);
     }
 
@@ -64,7 +70,8 @@ public:
      * @param method Blur detection algorithm to use
      * @return Blur score (higher = sharper, less blurred)
      */
-    double compute(const cv::Mat& image, BlurMethod method = BlurMethod::LAPLACIAN) const {
+    double compute(const cv::Mat& image, BlurMethod method = BlurMethod::LAPLACIAN) const
+    {
         switch (method) {
             case BlurMethod::LAPLACIAN:
                 return computeLaplacianScore(image);
@@ -95,7 +102,9 @@ public:
      * @param method Blur detection algorithm to use (default: LAPLACIAN)
      * @return CV_64F matrix of size gridRows x gridCols with per-block scores
      */
-    cv::Mat computeGrid(const cv::Mat& image, int gridRows, int gridCols, BlurMethod method = BlurMethod::LAPLACIAN) const {
+    cv::Mat computeGrid(const cv::Mat& image, int gridRows, int gridCols,
+                        BlurMethod method = BlurMethod::LAPLACIAN) const
+    {
         if (gridRows <= 0 || gridCols <= 0) {
             throw std::invalid_argument("gridRows and gridCols must be positive");
         }
@@ -121,7 +130,8 @@ public:
     }
 
 private:
-    double computeLaplacianScore(const cv::Mat& image) const {
+    double computeLaplacianScore(const cv::Mat& image) const
+    {
         cv::Mat gray, laplacian;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
         cv::Laplacian(gray, laplacian, CV_64F);
@@ -130,7 +140,8 @@ private:
         return sigma.val[0] * sigma.val[0];
     }
 
-    double computeFourierBlurScore(const cv::Mat& image) const {
+    double computeFourierBlurScore(const cv::Mat& image) const
+    {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
@@ -153,7 +164,8 @@ private:
         return stddev[0] * stddev[0];
     }
 
-    double computeGradientMagnitudeScore(const cv::Mat& image) const {
+    double computeGradientMagnitudeScore(const cv::Mat& image) const
+    {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
@@ -170,7 +182,8 @@ private:
         return stddev[0];
     }
 
-    double computeContrastScore(const cv::Mat& image) const {
+    double computeContrastScore(const cv::Mat& image) const
+    {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
@@ -180,20 +193,23 @@ private:
         return stddev[0];
     }
 
-    double computePhaseCorrelationScore(const cv::Mat& image) const {
+    double computePhaseCorrelationScore(const cv::Mat& image) const
+    {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
         gray.convertTo(gray, CV_64F);
 
         cv::Mat shifted = cv::Mat::zeros(gray.size(), gray.type());
-        gray(cv::Rect(1, 1, gray.cols - 1, gray.rows - 1)).copyTo(shifted(cv::Rect(0, 0, gray.cols - 1, gray.rows - 1)));
+        gray(cv::Rect(1, 1, gray.cols - 1, gray.rows - 1))
+            .copyTo(shifted(cv::Rect(0, 0, gray.cols - 1, gray.rows - 1)));
 
         double response = 0.0;
         cv::phaseCorrelate(gray, shifted, cv::noArray(), &response);
 
         return response;
     }
-    double computeWaveletBlurScore(const cv::Mat& image) const {
+    double computeWaveletBlurScore(const cv::Mat& image) const
+    {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
         gray.convertTo(gray, CV_32F);
@@ -203,7 +219,7 @@ private:
         cv::Mat wavelet_detail = cv::Mat::zeros(gray.size(), CV_32F);
         int num_levels = 4;
 
-        for(int i = 0; i < num_levels; i++) {
+        for (int i = 0; i < num_levels; i++) {
             cv::Mat down, up;
             cv::pyrDown(current, down);
             cv::pyrUp(down, up, current.size());
@@ -223,14 +239,15 @@ private:
         return stddev[0];
     }
 
-    double computeBrennerScore(const cv::Mat& image) const {
+    double computeBrennerScore(const cv::Mat& image) const
+    {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
         gray.convertTo(gray, CV_64F);
 
         cv::Mat diff;
         cv::Mat right = gray(cv::Rect(2, 0, gray.cols - 2, gray.rows));
-        cv::Mat left  = gray(cv::Rect(0, 0, gray.cols - 2, gray.rows));
+        cv::Mat left = gray(cv::Rect(0, 0, gray.cols - 2, gray.rows));
         cv::subtract(right, left, diff);
         cv::pow(diff, 2, diff);
 
@@ -239,7 +256,8 @@ private:
         return stddev[0];
     }
 
-    double computeTenengradScore(const cv::Mat& image) const {
+    double computeTenengradScore(const cv::Mat& image) const
+    {
         cv::Mat gray;
         cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
@@ -256,7 +274,6 @@ private:
         cv::meanStdDev(squared, cv::noArray(), stddev);
         return stddev[0];
     }
-
 };
 
-} // namespace blur
+}  // namespace blur

@@ -1,8 +1,10 @@
-#include "ImageBlurScore.h"
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
-int main(int argc, char** argv) {
+#include "ImageBlurScore.h"
+
+int main(int argc, char** argv)
+{
     if (argc != 2) {
         std::cout << "Usage: " << argv[0] << " <image_path>" << std::endl;
         return -1;
