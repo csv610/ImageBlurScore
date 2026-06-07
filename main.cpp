@@ -37,7 +37,22 @@ int main(int argc, char** argv)
     std::cout << "Blur Score (Brenner):   " << score << std::endl;
 
     score = blurscorer(image, blur::BlurMethod::TENENGRAD);
-    std::cout << "Blur Score (Tenengrad): " << score << std::endl;
+    std::cout << "Blur Score (Tenengrad):  " << score << std::endl;
+
+    score = blurscorer(image, blur::BlurMethod::SML);
+    std::cout << "Blur Score (SML):        " << score << std::endl;
+
+    score = blurscorer(image, blur::BlurMethod::EOL);
+    std::cout << "Blur Score (EOL):        " << score << std::endl;
+
+    score = blurscorer(image, blur::BlurMethod::SCHARR);
+    std::cout << "Blur Score (Scharr):     " << score << std::endl;
+
+    score = blurscorer(image, blur::BlurMethod::HISTOGRAM_ENTROPY);
+    std::cout << "Blur Score (Entropy):    " << score << std::endl;
+
+    score = blurscorer(image, blur::BlurMethod::DCT_ENERGY_RATIO);
+    std::cout << "Blur Score (DCT Ratio):  " << score << std::endl;
 
     cv::Mat grid = blurscorer(image, 4, 4);
     std::cout << "Grid (4x4, Laplacian):" << std::endl;

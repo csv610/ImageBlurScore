@@ -155,6 +155,92 @@ int main()
         PASS();
     }
 
+    {
+        TEST("SML on gradient image");
+        cv::Mat img = createTestImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::SML);
+        assert(std::isfinite(s));
+        assert(s >= 0);
+        PASS();
+    }
+
+    {
+        TEST("SML on uniform image");
+        cv::Mat img = createUniformImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::SML);
+        assert(s < 1.0);
+        PASS();
+    }
+
+    {
+        TEST("EOL on gradient image");
+        cv::Mat img = createTestImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::EOL);
+        assert(std::isfinite(s));
+        assert(s >= 0);
+        PASS();
+    }
+
+    {
+        TEST("EOL on uniform image");
+        cv::Mat img = createUniformImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::EOL);
+        assert(s < 1.0);
+        PASS();
+    }
+
+    {
+        TEST("Scharr on gradient image");
+        cv::Mat img = createTestImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::SCHARR);
+        assert(std::isfinite(s));
+        assert(s >= 0);
+        PASS();
+    }
+
+    {
+        TEST("Scharr on uniform image");
+        cv::Mat img = createUniformImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::SCHARR);
+        assert(s < 0.5);
+        PASS();
+    }
+
+    {
+        TEST("Histogram entropy on gradient image");
+        cv::Mat img = createTestImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::HISTOGRAM_ENTROPY);
+        assert(std::isfinite(s));
+        assert(s > 0);
+        PASS();
+    }
+
+    {
+        TEST("Histogram entropy on uniform image (should be ~0)");
+        cv::Mat img = createUniformImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::HISTOGRAM_ENTROPY);
+        assert(std::isfinite(s));
+        assert(s < 0.01);
+        PASS();
+    }
+
+    {
+        TEST("DCT energy ratio on gradient image");
+        cv::Mat img = createTestImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::DCT_ENERGY_RATIO);
+        assert(std::isfinite(s));
+        assert(s >= 0);
+        PASS();
+    }
+
+    {
+        TEST("DCT energy ratio on uniform image (should be ~0)");
+        cv::Mat img = createUniformImage(100, 100);
+        double s = scorer(img, blur::BlurMethod::DCT_ENERGY_RATIO);
+        assert(s < 0.01);
+        PASS();
+    }
+
     // --- Grid tests ---
     std::cout << "[Grid tests]" << std::endl;
 

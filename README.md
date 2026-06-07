@@ -60,6 +60,11 @@ g++ -std=c++17 main.cpp -o blur_test `pkg-config --cflags --libs opencv4`
 | Wavelet | `BlurMethod::WAVELET` | Multi-level Laplacian pyramid detail coefficients |
 | Brenner | `BlurMethod::BRENNER` | Squared horizontal difference (step 2) standard deviation |
 | Tenengrad | `BlurMethod::TENENGRAD` | Sum of squared Sobel responses standard deviation |
+| SML | `BlurMethod::SML` | Sum of Modified Laplacian (absolute separated second derivatives) |
+| EOL | `BlurMethod::EOL` | Energy of Laplacian (squared Laplacian values) |
+| Scharr | `BlurMethod::SCHARR` | Scharr gradient magnitude standard deviation |
+| Histogram Entropy | `BlurMethod::HISTOGRAM_ENTROPY` | Shannon entropy of the grayscale histogram |
+| DCT Energy Ratio | `BlurMethod::DCT_ENERGY_RATIO` | High-frequency / total energy ratio in DCT domain |
 
 ## API
 

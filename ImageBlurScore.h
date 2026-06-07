@@ -26,7 +26,12 @@ enum class BlurMethod
     PHASE_CORRELATION,   ///< Phase correlation method
     WAVELET,             ///< Wavelet decomposition method
     BRENNER,             ///< Brenner focus measure (horizontal diff step 2)
-    TENENGRAD            ///< Tenenbaum gradient (sum of squared Sobel responses)
+    TENENGRAD,           ///< Tenenbaum gradient (sum of squared Sobel responses)
+    SML,                 ///< Sum of Modified Laplacian (Nayar & Nakagawa)
+    EOL,                 ///< Energy of Laplacian (sum of squared Laplacian)
+    SCHARR,              ///< Scharr gradient magnitude
+    HISTOGRAM_ENTROPY,   ///< Histogram entropy measure
+    DCT_ENERGY_RATIO     ///< DCT high-freq / total energy ratio
 };
 
 /**
@@ -89,6 +94,16 @@ public:
                 return computeBrennerScore(image);
             case BlurMethod::TENENGRAD:
                 return computeTenengradScore(image);
+            case BlurMethod::SML:
+                return computeSMLScore(image);
+            case BlurMethod::EOL:
+                return computeEOLScore(image);
+            case BlurMethod::SCHARR:
+                return computeScharrScore(image);
+            case BlurMethod::HISTOGRAM_ENTROPY:
+                return computeHistogramEntropyScore(image);
+            case BlurMethod::DCT_ENERGY_RATIO:
+                return computeDCTEnergyRatioScore(image);
             default:
                 return computeLaplacianScore(image);
         }
@@ -273,6 +288,112 @@ private:
         cv::Scalar stddev;
         cv::meanStdDev(squared, cv::noArray(), stddev);
         return stddev[0];
+    }
+
+    double computeSMLScore(const cv::Mat& image) const
+    {
+        cv::Mat gray;
+        cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+        gray.convertTo(gray, CV_64F);
+
+        cv::Mat ddx, ddy;
+        cv::Sobel(gray, ddx, CV_64F, 2, 0, 3);
+        cv::Sobel(gray, ddy, CV_64F, 0, 2, 3);
+
+        ddx = cv::abs(ddx);
+        ddy = cv::abs(ddy);
+        cv::Mat ml;
+        cv::add(ddx, ddy, ml);
+
+        cv::Scalar stddev;
+        cv::meanStdDev(ml, cv::noArray(), stddev);
+        return stddev[0];
+    }
+
+    double computeEOLScore(const cv::Mat& image) const
+    {
+        cv::Mat gray;
+        cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+
+        cv::Mat laplacian;
+        cv::Laplacian(gray, laplacian, CV_64F);
+
+        cv::pow(laplacian, 2, laplacian);
+
+        cv::Scalar stddev;
+        cv::meanStdDev(laplacian, cv::noArray(), stddev);
+        return stddev[0];
+    }
+
+    double computeScharrScore(const cv::Mat& image) const
+    {
+        cv::Mat gray;
+        cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+
+        cv::Mat gx, gy;
+        cv::Scharr(gray, gx, CV_32F, 1, 0);
+        cv::Scharr(gray, gy, CV_32F, 0, 1);
+
+        cv::Mat magnitude;
+        cv::magnitude(gx, gy, magnitude);
+
+        cv::Scalar stddev;
+        cv::meanStdDev(magnitude, cv::noArray(), stddev);
+        return stddev[0];
+    }
+
+    double computeHistogramEntropyScore(const cv::Mat& image) const
+    {
+        cv::Mat gray;
+        cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+
+        int histSize = 256;
+        float range[] = {0, 256};
+        const float* histRange = {range};
+        cv::Mat hist;
+        cv::calcHist(&gray, 1, 0, cv::Mat(), hist, 1, &histSize, &histRange);
+        hist /= gray.total();
+
+        double entropy = 0;
+        for (int i = 0; i < histSize; i++) {
+            float p = hist.at<float>(i);
+            if (p > 0) {
+                entropy -= p * std::log2(p);
+            }
+        }
+        return entropy;
+    }
+
+    double computeDCTEnergyRatioScore(const cv::Mat& image) const
+    {
+        cv::Mat gray;
+        cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+        gray.convertTo(gray, CV_32F);
+
+        double totalHigh = 0, totalLow = 0;
+        int const blockSize = 8;
+
+        for (int r = 0; r <= gray.rows - blockSize; r += blockSize) {
+            for (int c = 0; c <= gray.cols - blockSize; c += blockSize) {
+                cv::Mat block = gray(cv::Rect(c, r, blockSize, blockSize)).clone();
+                cv::dct(block, block);
+
+                for (int i = 0; i < blockSize; i++) {
+                    for (int j = 0; j < blockSize; j++) {
+                        if (i == 0 && j == 0) continue;
+                        double val = std::abs(block.at<float>(i, j));
+                        if (i + j < 4) {
+                            totalLow += val;
+                        } else {
+                            totalHigh += val;
+                        }
+                    }
+                }
+            }
+        }
+
+        double denom = totalLow + totalHigh;
+        return denom > 0 ? totalHigh / denom : 0;
     }
 };
 
